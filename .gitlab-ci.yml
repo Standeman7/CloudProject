@@ -1,42 +1,43 @@
-# Use the official Hashicorp Terraform image as our Docker worker
 image:
   name: hashicorp/terraform:latest
   entrypoint:
     - '/usr/bin/env'
     - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
-# Define the order of operations
 stages:
   - validate
   - plan
   - apply
 
-# This runs before every single job to set up our "Worker Node"
 before_script:
-  - apk add --no-cache openssh-client ansible  # Install Ansible & SSH
+  # 1. Install necessary tools on the worker node
+  - apk add --no-cache openssh-client ansible
+  # 2. Inject your SSH keys for Ansible access
   - mkdir -p ~/.ssh
   - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
   - echo "$SSH_PUBLIC_KEY" > ~/.ssh/id_rsa.pub
   - chmod 600 ~/.ssh/id_rsa
   - chmod 644 ~/.ssh/id_rsa.pub
-  - terraform init
+  # 3. Initialize Terraform inside the "main" directory
+  - terraform -chdir=main init
 
 validate:
   stage: validate
   script:
-    - terraform validate
+    - terraform -chdir=main validate
 
 plan:
   stage: plan
   script:
-    - terraform plan -out=tfplan
+    - terraform -chdir=main plan -out=tfplan
   artifacts:
+    # Save the plan file so the "apply" stage can find it
     paths:
-      - tfplan
+      - main/tfplan
 
 apply:
   stage: apply
   script:
-    - terraform apply -auto-approve tfplan
+    - terraform -chdir=main apply -auto-approve tfplan
   only:
-    - main  
+    - main
