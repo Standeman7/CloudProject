@@ -10,15 +10,14 @@ stages:
   - apply
 
 before_script:
-  # 1. Install necessary tools on the worker node
   - apk add --no-cache openssh-client ansible
-  # 2. Inject your SSH keys for Ansible access
   - mkdir -p ~/.ssh
-  - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-  - echo "$SSH_PUBLIC_KEY" > ~/.ssh/id_rsa.pub
+  - chmod 700 ~/.ssh
+  # Decode the public key so it's perfectly formatted for AWS
+  - echo "$SSH_PUBLIC_KEY" | base64 -d > ~/.ssh/id_rsa.pub
+  # Use the File variable for the private key
+  - cp "$SSH_PRIVATE_KEY" ~/.ssh/id_rsa
   - chmod 600 ~/.ssh/id_rsa
-  - chmod 644 ~/.ssh/id_rsa.pub
-  # 3. Initialize Terraform inside the "main" directory
   - terraform -chdir=main init
 
 validate:

@@ -10,3 +10,6 @@ variable "bucket_name" {
 variable "db_table_name" {
   default = "file-metadata-2025"
 }
+variable "SSH_PUBLIC_KEY" {
+  type = string
+}
