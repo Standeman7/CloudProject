@@ -12,4 +12,5 @@ variable "db_table_name" {
 }
 variable "SSH_PUBLIC_KEY" {
   type = string
+  default = null
 }

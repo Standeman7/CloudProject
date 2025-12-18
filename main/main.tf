@@ -27,7 +27,7 @@ provider "aws" {
 # This registers your local public key with AWS so Ansible can log in via SSH
 resource "aws_key_pair" "deployer" {
   key_name   = "deployer-key"
-  public_key = var.SSH_PUBLIC_KEY
+  public_key = var.SSH_PUBLIC_KEY != null ? var.SSH_PUBLIC_KEY : file("~/.ssh/id_rsa.pub")
 }
 # --- 3. Ubuntu 24.04 LTS AMI ---
 

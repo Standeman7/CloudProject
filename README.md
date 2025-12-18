@@ -20,3 +20,5 @@ This project uses Terraform to build AWS infra and Ansible to configure a PHP ap
 
 4. **Variables**:
    - Change `bucket_name` in `variables.tf` if the name is already taken.
+5. **Using GITLAB CI/CD**:
+   - Update the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in GitLab CI/CD variables for automated deployments.
