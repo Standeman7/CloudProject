@@ -13,9 +13,11 @@ before_script:
   - apk add --no-cache openssh-client ansible
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
-  # Decode the public key so it's perfectly formatted for AWS
+  # 1. This decodes the key for use by the OS/Ansible
   - echo "$SSH_PUBLIC_KEY" | base64 -d > ~/.ssh/id_rsa.pub
-  # Use the File variable for the private key
+  # 2. THIS IS THE NEW LINE: This tells Terraform what the variable value is
+  - export TF_VAR_SSH_PUBLIC_KEY=$(echo "$SSH_PUBLIC_KEY" | base64 -d)
+  # 3. Use the File variable for the private key
   - cp "$SSH_PRIVATE_KEY" ~/.ssh/id_rsa
   - chmod 600 ~/.ssh/id_rsa
   - terraform -chdir=main init
