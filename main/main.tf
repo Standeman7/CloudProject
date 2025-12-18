@@ -133,7 +133,7 @@ resource "aws_instance" "web_server" {
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 
   tags = {
-    Name = "PHP-File-API"
+    Name = "Gitlab Automated Web Server"
   }
 
   # This block waits for the SSH port to be open before running Ansible
