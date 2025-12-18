@@ -1,0 +1,113 @@
+---
+- name: Configure PHP Web Application
+  hosts: all
+  become: yes
+  vars:
+    aws_region: "eu-west-1"
+    app_bucket: "sve-application-file-storage-2025"
+    app_table: "file-metadata-2025"
+  
+  tasks:
+    - name: Install dependencies
+      apt:
+        name: 
+          - apache2
+          - php
+          - libapache2-mod-php
+          - php-curl
+          - php-xml
+          - php-mbstring
+          - unzip
+          - curl
+        state: present
+        update_cache: yes
+      retries: 3
+      delay: 5
+      register: result
+      until: result is succeeded
+
+    - name: Install Composer
+      shell: |
+        curl -sS https://getcomposer.org/installer | php
+        mv composer.phar /usr/local/bin/composer
+        chmod +x /usr/local/bin/composer
+      args:
+        creates: /usr/local/bin/composer
+      retries: 3
+      delay: 5
+      register: composer_install
+      until: composer_install is succeeded
+
+    - name: Copy App Files to Web Root
+      copy:
+        src: "{{ item }}"
+        dest: /var/www/html/
+        mode: '0644'
+      with_items:
+        - app.php
+        - template.php
+        - style.css
+
+    - name: Create composer.json for AWS SDK
+      copy:
+        content: |
+          {
+            "require": {
+              "aws/aws-sdk-php": "^3.0"
+            }
+          }
+        dest: /var/www/html/composer.json
+        mode: '0644'
+
+    - name: Install AWS SDK via Composer
+      shell: composer install --no-dev --optimize-autoloader
+      args:
+        chdir: /var/www/html
+        creates: /var/www/html/vendor/autoload.php
+      environment:
+        COMPOSER_ALLOW_SUPERUSER: "1"
+      retries: 3
+      delay: 5
+      register: sdk_install
+      until: sdk_install is succeeded
+
+    - name: Fix ownership of web root
+      file:
+        path: /var/www/html
+        owner: www-data
+        group: www-data
+        recurse: yes
+
+    - name: Inject Terraform variables into app.php
+      lineinfile:
+        path: /var/www/html/app.php
+        regexp: "{{ item.regex }}"
+        line: "{{ item.line }}"
+      with_items:
+        - { regex: '^\$region =', line: "$region = '{{ aws_region }}';" }
+        - { regex: '^\$bucket =', line: "$bucket = '{{ app_bucket }}';" }
+        - { regex: '^\$table  =', line: "$table  = '{{ app_table }}';" }
+
+    - name: Ensure Apache is enabled and started
+      systemd:
+        name: apache2
+        enabled: yes
+        state: started
+
+    - name: Remove default Apache index.html
+      file:
+        path: /var/www/html/index.html
+        state: absent
+    - name: Configure Apache DirectoryIndex
+      lineinfile:
+        path: /etc/apache2/mods-enabled/dir.conf
+        regexp: '^\s*DirectoryIndex'
+        line: '        DirectoryIndex app.php index.php index.html'
+        backrefs: yes
+      notify: restart apache
+
+  handlers:
+    - name: restart apache
+      systemd:
+        name: apache2
+        state: restarted
